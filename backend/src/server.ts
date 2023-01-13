@@ -3,6 +3,9 @@ import dotenv from "dotenv";
 import bodyParser from "body-parser";
 import cors from "cors";
 import mongoose, { ConnectOptions } from "mongoose";
+import { errorHandler } from "./middlewares/error.middleware";
+import userRouter from "./routes/all.user.routes";
+import ownerRouter from "./routes/owner.routes";
 
 dotenv.config();
 
@@ -30,4 +33,12 @@ app.get("/", (req: Request, res: Response) => {
     });
 });
 
+// api
+app.use("/api/user", userRouter);
+app.use("/api/owner", ownerRouter);
+
+//error handler
+app.use(errorHandler)
+
+// listen
 app.listen(port, () => console.log(`running on port ${port}`));
