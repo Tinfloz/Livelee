@@ -7,6 +7,7 @@ export const createJamPadZod = z.object({
     city: z.string(),
     state: z.string(),
     pincode: z.string(),
+    rate: z.string(),
     equipment: z.string(),
     opening: z.string(),
     closing: z.string(),

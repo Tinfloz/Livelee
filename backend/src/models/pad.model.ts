@@ -16,6 +16,7 @@ export interface IPad {
     pincode: string,
     latitude: number,
     longitude: number,
+    rate: number,
     equipment: string,
     opening: string,
     closing: string,
@@ -55,6 +56,10 @@ const padSchema = new mongoose.Schema<IPad, IPadModel>({
     pincode: {
         type: String,
         required: true,
+    },
+    rate: {
+        type: Number,
+        required: true
     },
     latitude: {
         type: Number,

@@ -5,6 +5,9 @@ import { addressChangeZod, changeIntervalZod, changePadZod, createJamPadZod, tim
 import Pads from "../models/pad.model";
 import { getLatLng } from "../helpers/get.lat.lng";
 import mongoose from "mongoose";
+import nodeCron from "node-cron";
+import Bookings from "../models/bookings.model";
+import Customers from "../models/customer.model";
 
 // create jampads
 const createJampads = async (req: Request, res: Response): Promise<void> => {
@@ -21,7 +24,7 @@ const createJampads = async (req: Request, res: Response): Promise<void> => {
             return
         };
         const { name, image, address, city, state, pincode,
-            equipment, opening, closing, interval } = result.data;
+            equipment, opening, closing, interval, rate } = result.data;
         const startTime = moment(opening, "HH:mm");
         const closingTime = moment(closing, "HH:mm");
         let slotArray = [];
@@ -51,6 +54,7 @@ const createJampads = async (req: Request, res: Response): Promise<void> => {
             pincode,
             latitude,
             longitude,
+            rate: Number(rate),
             equipment,
             opening,
             closing,
@@ -361,6 +365,7 @@ const changePadAddress = async (req: Request, res: Response): Promise<void> => {
         };
     };
 };
+
 
 export {
     createJampads,

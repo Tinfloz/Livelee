@@ -6,6 +6,7 @@ import mongoose, { ConnectOptions } from "mongoose";
 import { errorHandler } from "./middlewares/error.middleware";
 import userRouter from "./routes/all.user.routes";
 import ownerRouter from "./routes/owner.routes";
+import customerRouter from "./routes/customer.routes";
 
 dotenv.config();
 
@@ -36,6 +37,7 @@ app.get("/", (req: Request, res: Response) => {
 // api
 app.use("/api/user", userRouter);
 app.use("/api/owner", ownerRouter);
+app.use("/api/customer", customerRouter);
 
 //error handler
 app.use(errorHandler)

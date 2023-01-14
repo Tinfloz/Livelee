@@ -7,12 +7,14 @@ interface ISlot {
 }
 
 export interface IBookings {
-    _id: string,
+    _id: mongoose.Schema.Types.ObjectId,
     customer: mongoose.Schema.Types.ObjectId,
     pad: mongoose.Schema.Types.ObjectId,
-    slots: Array<ISlot>,
+    slots: ISlot,
+    total: number,
     isPaid: boolean,
-    paidAt: string
+    paidAt: string,
+    rzpOrderId: string
 }
 
 interface IBookingsModel extends mongoose.Model<IBookings> {
@@ -28,45 +30,49 @@ const bookingSchema = new mongoose.Schema<IBookings, IBookingsModel>({
         type: mongoose.Types.ObjectId,
         ref: "Pads"
     },
-    slots: [
-        {
-            date: {
+    slots: {
+        date: {
+            type: String,
+            required: true
+        },
+        time: [
+            {
                 type: String,
-            },
-            time: [
-                {
-                    type: String
-                }
-            ]
-        }
-    ],
+                required: true
+            }
+        ]
+    },
     isPaid: {
         type: Boolean,
         default: false
     },
+    total: {
+        type: Number,
+        required: true
+    },
     paidAt: {
         type: String
-    }
+    },
+    rzpOrderId: {
+        type: String
+    },
 }, { timestamps: true });
 
 // post hook method
-bookingSchema.post("save", function (doc, next: any) {
+bookingSchema.post("save", function (doc) {
     setTimeout(async () => {
         if (this.isPaid) {
-            return next()
+            return
         };
         const pad = await Pads.findById(this.pad);
         for (let element of pad!.bookings) {
-            for (let i of this.slots) {
-                if (element.date === i.date) {
-                    element.slots = [...element.slots, ...i.time];
-                    await pad!.save();
-                    break;
-                };
+            if (element.date === this.slots.date) {
+                element.slots = [...element.slots, ...this.slots.time];
+                break;
             };
         };
+        await pad!.save();
         await doc.remove();
-        return next();
     }, 900000);
 });
 
