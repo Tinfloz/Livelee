@@ -205,7 +205,7 @@ const editTimes = async (req: Request, res: Response): Promise<void> => {
     };
 };
 
-// delte jampad listing
+// delete jampad listing
 const deleteListing = async (req: Request, res: Response): Promise<void> => {
     try {
         const { id } = req.params;
@@ -447,7 +447,7 @@ const cancelBookingOwner = async (req: Request, res: Response): Promise<void> =>
 };
 
 // cron job
-nodeCron.schedule("0 0 * * * ", async () => {
+nodeCron.schedule("0 0 * * * ", async (): Promise<void> => {
     let arrayOfOldListings = [];
     for await (let pad of Pads.find()) {
         const startDay = moment(pad.created, "DD/MM/YYYY");
@@ -483,6 +483,7 @@ nodeCron.schedule("0 0 * * * ", async () => {
             };
         };
         await element.remove();
+        return
     };
 });
 
