@@ -21,7 +21,8 @@ export interface IPad {
     opening: string,
     closing: string,
     interval: number,
-    bookings: Array<ISingleBooking>
+    bookings: Array<ISingleBooking>,
+    created: Date
 };
 
 interface IPadModel extends mongoose.Model<IPad> {
@@ -96,7 +97,11 @@ const padSchema = new mongoose.Schema<IPad, IPadModel>({
                 }
             ]
         }
-    ]
+    ],
+    created: {
+        type: Date,
+        default: new Date()
+    }
 }, { timestamps: true });
 
 // statics

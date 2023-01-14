@@ -23,6 +23,7 @@
     "mongoose": "^6.8.3",
     "node-cron": "^3.0.2",
     "node-geocoder": "^4.2.0",
+    "nodemailer": "^6.9.0",
     "nodemon": "^2.0.20",
     "razorpay": "^2.8.4",
     "shortid": "^2.2.16",
@@ -36,6 +37,7 @@
     "@types/jsonwebtoken": "^9.0.1",
     "@types/node-cron": "^3.0.7",
     "@types/node-geocoder": "^3.24.5",
+    "@types/nodemailer": "^6.4.7",
     "@types/shortid": "^0.0.29"
   }
 }

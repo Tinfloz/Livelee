@@ -8,6 +8,8 @@ import mongoose from "mongoose";
 import nodeCron from "node-cron";
 import Bookings from "../models/bookings.model";
 import Customers from "../models/customer.model";
+import Users from "../models/all.user.model";
+import { sendEmail } from "../utils/send.email";
 
 // create jampads
 const createJampads = async (req: Request, res: Response): Promise<void> => {
@@ -366,6 +368,123 @@ const changePadAddress = async (req: Request, res: Response): Promise<void> => {
     };
 };
 
+// cancel a booking
+const cancelBookingOwner = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            throw "id invalid";
+        };
+        const booking = await Bookings.findById(id).populate("pad");
+        if (!booking) {
+            throw "booking not found";
+        };
+        const customer = await Customers.findById(booking.customer).populate("userId");
+        const pad = await Pads.findById(booking.pad);
+        if (!customer) {
+            throw "customer not found";
+        };
+        let owner: any;
+        if (Pads.instanceOfIpad(booking.pad)) {
+            owner = await Owners.findById(booking.pad.owner).populate("userId");
+        };
+        for (let element of owner!.bookings) {
+            if (element.toString() === id) {
+                let index = owner!.bookings.indexOf(element);
+                owner!.bookings.splice(index, 1);
+                break;
+            };
+        };
+        for (let element of customer.bookings) {
+            if (element.toString() === id) {
+                let index = customer.bookings.indexOf(element);
+                customer.bookings.splice(index, 1);
+                break;
+            };
+        };
+        for (let element of pad!.bookings) {
+            if (element.date === booking.slots.date) {
+                element.slots = [...element.slots, ...booking.slots.time];
+                break;
+            };
+        };
+        if (Users.instanceOfUser(customer.userId)) {
+            try {
+                const subject = `Booking ID: ${booking._id} has been cancelled by the owner!`;
+                const email = customer.userId.email;
+                const emailToSend = "Sorry for the inconvenience caused. Kindly, book a new slot!"
+                await sendEmail({
+                    subject,
+                    email,
+                    emailToSend
+                });
+            } catch (error) {
+                throw new Error("email could not be sent", { cause: error });
+            };
+        };
+        await booking.remove();
+        await customer.save();
+        await owner!.save();
+        await pad!.save();
+        res.status(200).json({
+            success: true,
+            id
+        });
+        return
+    } catch (error: any) {
+        if (error === "customer not found" || "booking not found") {
+            res.status(404).json({
+                success: false,
+                error: error.errors?.[0]?.message || error
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                error: error.errors?.[0]?.message || error
+            });
+        };
+    };
+};
+
+// cron job
+nodeCron.schedule("0 0 * * * ", async () => {
+    let arrayOfOldListings = [];
+    for await (let pad of Pads.find()) {
+        const startDay = moment(pad.created, "DD/MM/YYYY");
+        const today = moment();
+        const oneYear = moment(startDay.clone(), "DD/MM/YYYY").add(1, "year");
+        if (today.format("DD/MM/YYYY") === oneYear.format("DD/MM/YYYY")) {
+            arrayOfOldListings.push(pad);
+        };
+    };
+    if (arrayOfOldListings.length === 0) {
+        console.log("ran")
+        return
+    };
+    for (let element of arrayOfOldListings) {
+        const owner = await Owners.findById(element.owner).populate("userId");
+        if (Users.instanceOfUser(owner!.userId)) {
+            try {
+                const email = owner!.userId.email;
+                const subject = `Renew listing ${element.name} on Livelee!`;
+                const emailToSend = `
+                Hello,
+                
+                Please renew listing ${element.name} on Livelee!
+                
+                Best, 
+                Team Livelee
+                `
+                await sendEmail({
+                    email, subject, emailToSend
+                });
+            } catch (error) {
+                console.log(error)
+            };
+        };
+        await element.remove();
+    };
+});
 
 export {
     createJampads,
@@ -373,5 +492,6 @@ export {
     editTimes,
     deleteListing,
     changeDetails,
-    changePadAddress
+    changePadAddress,
+    cancelBookingOwner
 }
