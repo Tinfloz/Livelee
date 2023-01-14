@@ -446,6 +446,32 @@ const cancelBookingOwner = async (req: Request, res: Response): Promise<void> =>
     };
 };
 
+// get all bookings 
+const getAllBookings = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const owner = await Owners.findOne({
+            userId: req.user!._id
+        }).populate({
+            path: "bookings",
+            populate: {
+                path: "pad",
+                select: "_id image name address city"
+            }
+        });
+        res.status(200).json({
+            success: true,
+            bookings: owner!.bookings
+        });
+        return
+    } catch (error: any) {
+        res.status(500).json({
+            success: false,
+            error: error.errors?.[0]?.message || error
+        });
+    };
+};
+
+
 // cron job
 nodeCron.schedule("0 0 * * * ", async (): Promise<void> => {
     let arrayOfOldListings = [];
@@ -494,5 +520,6 @@ export {
     deleteListing,
     changeDetails,
     changePadAddress,
-    cancelBookingOwner
+    cancelBookingOwner,
+    getAllBookings,
 }

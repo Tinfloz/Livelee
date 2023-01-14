@@ -7,6 +7,7 @@ import { errorHandler } from "./middlewares/error.middleware";
 import userRouter from "./routes/all.user.routes";
 import ownerRouter from "./routes/owner.routes";
 import customerRouter from "./routes/customer.routes";
+import padRouter from "./routes/pads.routes";
 
 dotenv.config();
 
@@ -38,6 +39,7 @@ app.get("/", (req: Request, res: Response) => {
 app.use("/api/user", userRouter);
 app.use("/api/owner", ownerRouter);
 app.use("/api/customer", customerRouter);
+app.use("/api/pad", padRouter);
 
 //error handler
 app.use(errorHandler)

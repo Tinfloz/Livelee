@@ -239,6 +239,7 @@ const cancelBooking = async (req: Request, res: Response): Promise<void> => {
     };
 };
 
+
 export {
     bookSlots,
     createRzpOrder,
