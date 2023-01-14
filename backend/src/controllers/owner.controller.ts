@@ -483,8 +483,8 @@ nodeCron.schedule("0 0 * * * ", async (): Promise<void> => {
             };
         };
         await element.remove();
-        return
     };
+    return
 });
 
 export {
