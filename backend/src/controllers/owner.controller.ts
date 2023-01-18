@@ -10,6 +10,7 @@ import Bookings from "../models/bookings.model";
 import Customers from "../models/customer.model";
 import Users from "../models/all.user.model";
 import { sendEmail } from "../utils/send.email";
+import { bookingZod } from "../zod/customer.controller.zod";
 
 // create jampads
 const createJampads = async (req: Request, res: Response): Promise<void> => {
@@ -17,6 +18,7 @@ const createJampads = async (req: Request, res: Response): Promise<void> => {
         const owner = await Owners.findOne({
             userId: req.user!._id
         });
+        console.log(req.body);
         const result = createJamPadZod.safeParse(req.body);
         if (!result.success) {
             res.status(400).json({
@@ -46,6 +48,7 @@ const createJampads = async (req: Request, res: Response): Promise<void> => {
             bookingAvailability.push(slotPerDay)
         };
         const setAddress = `${address}, ${city}`;
+        console.log(setAddress)
         const [latitude, longitude] = await getLatLng(setAddress)
         const pad = await Pads.create({
             name,
@@ -70,10 +73,12 @@ const createJampads = async (req: Request, res: Response): Promise<void> => {
         owner!.pad.push(pad._id);
         await owner!.save();
         res.status(200).json({
-            success: true
+            success: true,
+            id: pad._id
         });
         return
     } catch (error: any) {
+        console.log(error)
         res.status(500).json({
             success: false,
             error: error.errors?.[0]?.message || error
@@ -81,13 +86,12 @@ const createJampads = async (req: Request, res: Response): Promise<void> => {
     };
 };
 
-// change interval 
-// TODO: add cancellation logic after change
+// change interval
 const changeInterval = async (req: Request, res: Response): Promise<void> => {
     try {
         const { id } = req.params;
         if (!mongoose.Types.ObjectId.isValid(id)) {
-            throw "invalid id"
+            throw "id invalid";
         };
         const result = changeIntervalZod.safeParse(req.body);
         if (!result.success) {
@@ -97,27 +101,63 @@ const changeInterval = async (req: Request, res: Response): Promise<void> => {
             });
             return
         };
+        const pad = await Pads.findById(id);
         const owner = await Owners.findOne({
             userId: req.user!._id
-        });
-        const pad = await Pads.findById(id);
+        }).populate("bookings");
         if (!pad) {
-            throw "pad not found"
+            throw "pad not found";
         };
-        if (pad!.owner.toString() !== owner!._id.toString()) {
+        if (pad.owner.toString() !== owner!._id.toString()) {
             throw "not authorised"
         };
-        pad!.interval = Number(result.data.interval);
+        pad.interval = Number(result.data.interval);
         let slotsArray = [];
-        let startTime = moment(pad!.opening, "HH:mm");
-        let closingTime = moment(pad!.closing, "HH:mm");
-        while (startTime.format("HH:mm") !== closingTime.format("HH:mm")) {
-            let slots = `${startTime.format("HH:mm")}-${startTime.add(Number(result.data.interval), "m").format("HH:mm")}`;
-            slotsArray.push(slots);
+        while (moment(pad.opening, "DD/MM/YYYY").format("DD/MM/YYYY") !== moment(pad.closing, "DD/MM/YYYY").format("DD/MM/YYYY")) {
+            let slotRange = `${moment(pad.opening, "DD/MM/YYYY").format("DD/MM/YYYY")}-${moment(pad.opening, "DD/MM/YYYY").add(Number(result.data.interval), "minutes").format("DD/MM/YYYY")}`;
+            slotsArray.push(slotRange);
         };
-        for (let element of pad!.bookings) {
+        for (let element of pad.bookings) {
             element.slots = slotsArray;
         };
+        for (let element of owner!.bookings) {
+            if (Bookings.instanceOfIBookings(element)) {
+                if (element.pad.toString() === id) {
+                    const customer = await Customers.findById(element.customer).populate("userId");
+                    try {
+                        if (Users.instanceOfUser(customer!.userId)) {
+                            let email = customer!.userId.email;
+                            let subject = `Booking ID: ${element._id} cancelled!`
+                            let emailToSend = `
+                            Dear Customer,
+
+                            Booking ID: ${element._id} has been cancelled by the owner due to a renewed scheduling! 
+                            Sorry for the inconvenience caused! You are free to re-book your slots.
+                            
+                            Best,
+                            Team Livelee
+                            `
+                            await sendEmail({
+                                email, subject, emailToSend
+                            });
+                        }
+                    } catch (error: any) {
+                        console.log(error);
+                    };
+                    for (let i of customer!.bookings) {
+                        if (i.toString() === element._id.toString()) {
+                            let index = customer!.bookings.indexOf(i);
+                            customer!.bookings.splice(index, 1);
+                        };
+                    };
+                    let index = owner!.bookings.indexOf(element);
+                    owner!.bookings.splice(index, 1);
+                    Bookings.findByIdAndRemove(element._id);
+                    await customer!.save();
+                };
+            };
+        };
+        await owner!.save();
         await pad!.save();
         res.status(200).json({
             success: true
@@ -143,12 +183,12 @@ const changeInterval = async (req: Request, res: Response): Promise<void> => {
     };
 };
 
-// change opening or closing time
+// edit opening and closing times
 const editTimes = async (req: Request, res: Response): Promise<void> => {
     try {
         const { id } = req.params;
         if (!mongoose.Types.ObjectId.isValid(id)) {
-            throw "invalid id"
+            throw "invalid id";
         };
         const result = timeChangeZod.safeParse(req.body);
         if (!result.success) {
@@ -158,31 +198,68 @@ const editTimes = async (req: Request, res: Response): Promise<void> => {
             });
             return
         };
+        const pad = await Pads.findById(id);
         const owner = await Owners.findOne({
             userId: req.user!._id
-        });
-        const pad = await Pads.findById(id);
+        }).populate("bookings");
         if (!pad) {
             throw "pad not found";
         };
-        if (pad!.owner.toString() !== owner!._id.toString()) {
+        if (pad.owner.toString() === owner!._id.toString()) {
             throw "not authorised";
         };
-        pad!.opening = result.data.opening || pad!.opening;
-        pad!.closing = result.data.closing || pad!.closing;
-        const openingTime = moment(result.data.opening || pad!.opening, "HH:mm");
-        const closingTime = moment(result.data.closing || pad!.closing, "HH:mm");
+        const { opening, closing } = result.data;
+        pad.opening = opening || pad.opening;
+        pad.closing = closing || pad.closing;
         let slotsArray = [];
-        while (openingTime.format("HH:mm") !== closingTime.format("HH:mm")) {
-            let timeSlots = `${openingTime.format("HH:mm")}-${openingTime.add(Number(pad!.interval), "m").format("HH:mm")}`;
-            slotsArray.push(timeSlots);
+        while (moment(opening || pad.opening, "DD/MM/YYYY").format("DD/MM/YYYY") !== moment(closing || pad.closing, "DD/MM/YYYY").format("DD/MM/YYYY")) {
+            let rangeEl = `${moment(opening || pad.opening, "DD/MM/YYYY").format("DD/MM/YYYY")}-${moment(opening || pad.opening, "DD/MM/YYYY").add(pad.interval, "minutes").format("DD/MM/YYYY")}`
+            slotsArray.push(rangeEl);
         };
-        for (let element of pad!.bookings) {
+        for (let element of pad.bookings) {
             element.slots = slotsArray;
         };
+        for (let element of owner!.bookings) {
+            if (Bookings.instanceOfIBookings(element)) {
+                if (element.pad.toString() === id) {
+                    const customer = await Customers.findById(element.customer).populate("userId");
+                    try {
+                        if (Users.instanceOfUser(customer!.userId)) {
+                            let email = customer!.userId.email;
+                            let subject = `Booking ID: ${element._id} cancelled`;
+                            let emailToSend = `
+                            Dear Customer,
+
+                            Booking ID: ${element._id} has been cancelled by the owner due to a renewed scheduling! 
+                            Sorry for the inconvenience caused! You are free to re-book your slots.
+                            
+                            Best,
+                            Team Livelee
+                            `
+                            await sendEmail({
+                                email, subject, emailToSend
+                            });
+                        }
+                    } catch (error: any) {
+                        console.log(error);
+                    };
+                    for (let i of customer!.bookings) {
+                        if (element._id.toString() === i.toString()) {
+                            let index = customer!.bookings.indexOf(i);
+                            customer!.bookings.splice(index, 1);
+                        };
+                    };
+                    let index = owner!.bookings.indexOf(element);
+                    owner!.bookings.splice(index, 1);
+                    Bookings.findByIdAndRemove(element._id);
+                    await customer!.save();
+                };
+            };
+        };
         await pad!.save();
+        await owner!.save();
         res.status(200).json({
-            success: true
+            success: true,
         });
         return
     } catch (error: any) {
@@ -523,3 +600,4 @@ export {
     cancelBookingOwner,
     getAllBookings,
 }
+
