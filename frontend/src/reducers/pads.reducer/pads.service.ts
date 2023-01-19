@@ -18,16 +18,28 @@ const getNearbyPadsUser = async (latitude: number, longitude: number, token: str
 const getPadByIdUser = async (id: string, token: string): Promise<{ success: boolean, pad: IPads }> => {
     const config = {
         headers: {
-            Authorizqation: `Bearer ${token}`
+            Authorization: `Bearer ${token}`
         }
     };
     const response = await axios.get(API_URL + `/get/pad/${id}`, config);
+    return response.data;
+};
+
+// get slots 
+const getSlotsByDate = async (id: string, token: string, date: { date: string }): Promise<{ success: boolean, slots: Array<string> }> => {
+    const config = {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    };
+    const response = await axios.post(API_URL + `/get/slots/${id}`, date, config);
     return response.data;
 }
 
 const padService = {
     getNearbyPadsUser,
-    getPadByIdUser
+    getPadByIdUser,
+    getSlotsByDate
 };
 
 export default padService;

@@ -17,6 +17,8 @@ import { useAppSelector } from "./typed.hooks/hooks";
 import SetAddress from "./pages/SetAddress";
 import Home from "./pages/Home";
 import CreateJamRoom from "./pages/CreateJamRoom";
+import IndividualJamPad from "./pages/IndividualJamPad";
+import Slots from "./pages/Slots";
 
 export const App = () => {
 
@@ -35,6 +37,8 @@ export const App = () => {
             <Route path="/set/address" element={<SetAddress />} />
             <Route path="/home" element={<Home />} />
             <Route path="/create/room" element={<CreateJamRoom />} />
+            <Route path="/get/pad/:id" element={<IndividualJamPad />} />
+            <Route path="/slots" element={<Slots />} />
             <Route path="/" element={<Landing />} />
           </Routes>
         </Router>

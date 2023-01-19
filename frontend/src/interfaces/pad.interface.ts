@@ -20,6 +20,7 @@ export interface IPadNearbyResponse {
 
 export interface IPadInit {
     pads: Array<IPads> | IPads | null,
+    slots: Array<string> | null,
     isSuccess: boolean,
     isLoading: boolean,
     isError: boolean,

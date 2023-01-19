@@ -6,6 +6,7 @@ import padService from "./pads.service";
 
 const initialState: IPadInit = {
     pads: null,
+    slots: null,
     isLoading: false,
     isSuccess: false,
     isError: false,
@@ -36,7 +37,7 @@ export const getNearbyPadsLoginUser = createAsyncThunk<
 });
 
 // get pads by id
-const getPadsByIdLoginUser = createAsyncThunk<
+export const getPadsByIdLoginUser = createAsyncThunk<
     {
         success: boolean,
         pad: IPads
@@ -57,6 +58,34 @@ const getPadsByIdLoginUser = createAsyncThunk<
     };
 });
 
+// get slots for user
+export const getSlotsByDateUser = createAsyncThunk<
+    {
+        success: boolean,
+        slots: Array<string>
+    },
+    {
+        id: string,
+        date: {
+            date: string
+        }
+    },
+    {
+        state: RootState,
+        rejectValue: ValidationErrors
+    }
+>("slots/date", async (details, thunkAPI) => {
+    try {
+        const { id, date } = details;
+        const token = thunkAPI.getState().user.user!.token;
+        return await padService.getSlotsByDate(id, token, date,);
+    } catch (error: any) {
+        const message = (error.response && error.response.data && error.response.data.message)
+            || error.message || error.toString();
+        return thunkAPI.rejectWithValue(message)
+    };
+});
+
 const padSlice = createSlice({
     name: "pad",
     initialState,
@@ -64,7 +93,8 @@ const padSlice = createSlice({
         resetPad: state => initialState,
         resetPadHelpers: state => ({
             ...initialState,
-            pads: state.pads
+            pads: state.pads,
+            slots: state.slots
         })
     },
     extraReducers: builder => {
@@ -91,6 +121,19 @@ const padSlice = createSlice({
                 state.pads = action.payload.pad;
             })
             .addCase(getPadsByIdLoginUser.rejected, (state, { payload }) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = payload!
+            })
+            .addCase(getSlotsByDateUser.pending, state => {
+                state.isLoading = true;
+            })
+            .addCase(getSlotsByDateUser.fulfilled, (state, action: PayloadAction<{ success: boolean, slots: Array<string> }>) => {
+                state.isLoading = false;
+                state.isSuccess = true;
+                state.slots = action.payload.slots;
+            })
+            .addCase(getSlotsByDateUser.rejected, (state, { payload }) => {
                 state.isLoading = false;
                 state.isError = true;
                 state.message = payload!

@@ -3,13 +3,21 @@ import { Flex, Text, Box, Button, Spinner, VStack } from "@chakra-ui/react";
 import { useAppSelector, useAppDispatch } from '../typed.hooks/hooks';
 import OwnerHomeCard from '../components/OwnerHomeCard';
 import { useJsApiLoader, GoogleMap, Marker } from "@react-google-maps/api";
-import { getNearbyPadsLoginUser, resetPadHelpers } from '../reducers/pads.reducer/pads.slice';
+import { getNearbyPadsLoginUser, resetPad, resetPadHelpers } from '../reducers/pads.reducer/pads.slice';
 import { IPads } from "../interfaces/pad.interface";
+import { useNavigate } from 'react-router-dom';
 
 const Home: FC = () => {
 
     const { pads } = useAppSelector(state => state.pads);
-    const [loc, setLoc] = useState<string>("");
+    const navigate = useNavigate();
+    const [padDetails, setPadDetails] = useState<{
+        name: string,
+        id: string
+    }>({
+        name: "",
+        id: ""
+    })
     const userType = useAppSelector(state => state.user.user!.userType);
     const { isLoaded } = useJsApiLoader({
         googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY!
@@ -42,6 +50,12 @@ const Home: FC = () => {
             navigator.geolocation.getCurrentPosition(resolve, reject)
         });
     };
+
+    useEffect(() => {
+        return () => {
+            dispatch(resetPad());
+        }
+    }, [dispatch])
 
     useEffect(() => {
         (async () => {
@@ -118,12 +132,12 @@ const Home: FC = () => {
                                                         left={`${pageCoords.x}px`}
                                                         top={`${pageCoords.y}px`}
                                                         zIndex="1"
-                                                        onClick={() => {
-
+                                                        onClick={padDetails.name === "You" ? undefined : () => {
+                                                            navigate(`/get/pad/${padDetails.id}`)
                                                         }}
                                                     >
                                                         <Text>
-                                                            {loc}
+                                                            {padDetails.name}
                                                         </Text>
                                                     </Box>
                                                 </>
@@ -137,7 +151,12 @@ const Home: FC = () => {
                                             >
                                                 <Marker
                                                     position={coords}
-                                                    onClick={() => setLoc("Your location")}
+                                                    onClick={
+                                                        () => setPadDetails(prevState => ({
+                                                            ...prevState,
+                                                            name: "You"
+                                                        }))
+                                                    }
                                                 />
                                                 {
                                                     Array.isArray(pads) ? (
@@ -168,7 +187,11 @@ const Home: FC = () => {
                                                                                                     lng: pad.longitude
                                                                                                 }}
                                                                                                 onClick={() => {
-                                                                                                    setLoc(pad.name)
+                                                                                                    setPadDetails(prevState => ({
+                                                                                                        ...prevState,
+                                                                                                        name: pad?.name,
+                                                                                                        id: pad?._id
+                                                                                                    }))
                                                                                                 }}
                                                                                             />
                                                                                         ))
